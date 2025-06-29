@@ -9,9 +9,15 @@ import hashlib
 import re
 from crewai import Crew, Process
 from sympy import content
+from database import init_db
+from database import get_session
+from models import AnalysisResult
 from agents import doctor,verifier, nutritionist, exercise_specialist
 from task import help_patients,nutrition_analysis, exercise_planning, verification
 
+init_db()
+
+# Initialize cache
 cache = Cache(directory="cache")
 
 logging.basicConfig(level=logging.INFO)
@@ -158,6 +164,18 @@ async def analyze_blood_report(
         if not crew_result['status']:
             raise HTTPException(status_code=500, detail=f"Analysis failed: {crew_result['error']}")
         
+        # Save analysis result to database
+        with get_session() as session:
+            analysis_result = AnalysisResult(
+                file_name=original_filename,
+                query=query,
+                analysis=crew_result['result'],
+                analysis_type=crew_result['analysis_type']
+            )
+            session.add(analysis_result)
+            session.commit()
+            logger.info(f"Analysis result saved to database for file: {original_filename}")
+        
         # Prepare response
         response = {
             "status": "success",
@@ -188,6 +206,7 @@ async def analyze_blood_report(
                 logger.info(f"Cleaned up temporary file: {file_path}")
             except Exception as e:
                 logger.warning(f"Failed to clean up file {file_path}: {str(e)}")
+                
 
 @app.post("/analyze-simple")
 async def analyze_simple(
@@ -237,6 +256,18 @@ async def analyze_simple(
             'query': query.strip() if query else "Summarize my blood test report",
             'file_path': file_path
         })
+
+        with get_session() as session:
+            analysis_result = AnalysisResult(
+                file_name=original_filename,
+                query=query,
+                analysis=str(result),
+                analysis_type="simple"
+            )
+            session.add(analysis_result)
+            session.commit()
+            logger.info(f"Analysis result saved to database for file: {original_filename}")
+        
         
         return {
             "status": "success",
@@ -258,6 +289,14 @@ async def analyze_simple(
                 os.remove(file_path)
             except Exception as e:
                 logger.warning(f"Cleanup failed: {str(e)}")
+                
+
+@app.get("/history", response_model=list[AnalysisResult])
+def get_analysis_history():
+    with get_session() as session:
+        results = session.query(AnalysisResult).order_by(AnalysisResult.timestamp.desc()).all()
+        return results
+
 
 if __name__ == "__main__":
     import uvicorn
