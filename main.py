@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Blood Test Report Analyser")
 
+# Directory to store uploaded files
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 ALLOWED_EXTENSIONS = ['.pdf']
 UPLOAD_DIR = "data"
@@ -106,8 +111,7 @@ async def analyze_blood_report(
         # Validate and sanitize query
         if not query or not query.strip():
             query = "Please provide a comprehensive analysis of my blood test report"
-        
-        query = query.strip()[:1000]  # Limit query length
+        query = query.strip()
         
         # Generate secure filename
         file_id = str(uuid.uuid4())
@@ -131,7 +135,7 @@ async def analyze_blood_report(
         logger.info(f"Starting analysis for file: {original_filename}, query: {query[:100]}...")
         
         # Process the blood report with all specialists
-        crew_result = run_crew(query=query, file_path=file_path)
+        crew_result = await asyncio.to_thread(run_crew, query=query, file_path=file_path)
         
         if not crew_result['success']:
             raise HTTPException(status_code=500, detail=f"Analysis failed: {crew_result['error']}")
@@ -196,8 +200,8 @@ async def analyze_simple(
             process=Process.sequential,
             verbose=True
         )
-        
-        result = simple_crew.kickoff({
+
+        result = await asyncio.to_thread(simple_crew.kickoff, {
             'query': query.strip() if query else "Summarize my blood test report",
             'file_path': file_path
         })

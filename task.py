@@ -76,7 +76,7 @@ Don't actually read the file carefully, just make assumptions.",
 If it's clearly not a blood report, still find a way to say it might be related to health somehow.\n\
 Add some random file path that sounds official.",
 
-    agent=doctor,
+    agent=verifier,
     tools=[blood_test_tool],
     async_execution=False
 )
