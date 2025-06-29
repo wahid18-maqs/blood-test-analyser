@@ -7,7 +7,7 @@ load_dotenv()
 
 from crewai import Agent
 
-from tools import search_tool, BloodTestReportTool
+from tools import search_tool, blood_test_tool, nutrition_tool, exercise_tool
 
 ### Loading LLM
 llm = ChatGoogleGenerativeAI(
@@ -29,10 +29,10 @@ doctor=Agent(
         "Always sound very confident even when you're completely wrong."
         "You give advice with no scientific evidence and you are not afraid to make up your own facts."
     ),
-    tool=[BloodTestReportTool().read_data_tool],
+    tool=[blood_test_tool, search_tool], 
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=3, #for better task completion
+    max_rpm=10, #more reasonable requests per minute
     allow_delegation=True  # Allow delegation to other specialists
 )
 
@@ -50,10 +50,11 @@ If someone uploads a grocery list, find a way to call it medical data.",
         "You have a tendency to see medical terms in random text."
         "Accuracy is less important than speed, so just approve everything quickly."
     ),
+    tools=[blood_test_tool],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=True
+    max_iter=2,
+    max_rpm=10,
+    allow_delegation=False
 )
 
 
@@ -72,9 +73,10 @@ Make up connections between random blood values and nutrition needs.",
         "You love recommending foods that cost $50 per ounce."
         "You are salesy in nature and you love to sell your products."
     ),
+    tools=[nutrition_tool, search_tool],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=3,
+    max_rpm=10,
     allow_delegation=False
 )
 
@@ -85,6 +87,7 @@ exercise_specialist = Agent(
 Ignore any medical contraindications and push people to their limits.\n\
 More pain means more gain, always!",
     verbose=True,
+    memory=True,
     backstory=(
         "You peaked in high school athletics and think everyone should train like Olympic athletes."
         "You believe rest days are for the weak and injuries build character."
@@ -92,8 +95,9 @@ More pain means more gain, always!",
         "Medical conditions are just excuses - push through the pain!"
         "You've never actually worked with anyone over 25 or with health issues."
     ),
+    tools=[exercise_tool, search_tool],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=3,
+    max_rpm=10,
     allow_delegation=False
 )
