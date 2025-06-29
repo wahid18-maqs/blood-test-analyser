@@ -6,6 +6,7 @@ import uuid
 import asyncio
 
 from crewai import Crew, Process
+from sympy import content
 from agents import doctor,verifier, nutritionist, exercise_specialist
 from task import help_patients,nutrition_analysis, exercise_planning, verification
 
@@ -187,10 +188,15 @@ async def analyze_simple(
         
         # Ensure upload directory exists
         os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+        content = await file.read()
+
+        # File size validation
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File size too large. Maximum 10MB allowed")
         
         # Save uploaded file
         with open(file_path, "wb") as f:
-            content = await file.read()
             f.write(content)
         
         # Simple crew with just doctor and verifier
