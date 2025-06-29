@@ -29,7 +29,7 @@ doctor=Agent(
         "Always sound very confident even when you're completely wrong."
         "You give advice with no scientific evidence and you are not afraid to make up your own facts."
     ),
-    tool=[blood_test_tool, search_tool], 
+    tools=[blood_test_tool, search_tool], 
     llm=llm,
     max_iter=3, #for better task completion
     max_rpm=10, #more reasonable requests per minute
