@@ -4,11 +4,15 @@ import os
 import logging
 import uuid
 import asyncio
-
+from diskcache import Cache
+import hashlib
+import re
 from crewai import Crew, Process
 from sympy import content
 from agents import doctor,verifier, nutritionist, exercise_specialist
 from task import help_patients,nutrition_analysis, exercise_planning, verification
+
+cache = Cache(directory="cache")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +27,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 ALLOWED_EXTENSIONS = ['.pdf']
 UPLOAD_DIR = "data"
+
+def generate_cache_key(query: str, file_bytes: bytes) -> str:
+    """Generates a unique cache key from file content and query"""
+    hash_digest = hashlib.md5(file_bytes).hexdigest()
+    normalized_query = query.strip().lower()[:200] 
+    return f"{hash_digest}:{normalized_query}"
 
 def validate_file(file: UploadFile) -> bool:
     """Validate uploaded file"""
@@ -129,6 +139,13 @@ async def analyze_blood_report(
                 if len(content) > MAX_FILE_SIZE:
                     raise HTTPException(status_code=400, detail="File size too large")
                 f.write(content)
+
+                # Check cache for existing analysis
+                cache_key = generate_cache_key(query, content)
+                if cache_key in cache:
+                    logger.info(f"Cache hit for query: {query[:100]} with file: {original_filename}")
+                    return cache[cache_key]
+                
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
         
@@ -138,7 +155,7 @@ async def analyze_blood_report(
         # Process the blood report with all specialists
         crew_result = await asyncio.to_thread(run_crew, query=query, file_path=file_path)
         
-        if not crew_result['success']:
+        if not crew_result['status']:
             raise HTTPException(status_code=500, detail=f"Analysis failed: {crew_result['error']}")
         
         # Prepare response
@@ -150,6 +167,9 @@ async def analyze_blood_report(
             "analysis_type": crew_result['analysis_type'],
             "disclaimer": "This analysis is for informational purposes only and should not replace professional medical advice. Always consult with qualified healthcare providers for medical decisions."
         }
+        cache[cache_key] = response  
+
+        cache_key[cache_key] = response  # Store in cache 
         
         logger.info(f"Analysis completed successfully for file: {original_filename}")
         return response
@@ -194,6 +214,12 @@ async def analyze_simple(
         # File size validation
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File size too large. Maximum 10MB allowed")
+       
+        # Check cache for existing analysis
+        cache_key = generate_cache_key(query, content)
+        if cache_key in cache:
+            logger.info(f"Cache hit for query: {query[:100]} with file: {original_filename}")
+            return cache[cache_key]
         
         # Save uploaded file
         with open(file_path, "wb") as f:
