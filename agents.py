@@ -1,15 +1,19 @@
 ## Importing libraries and files
 import os
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 load_dotenv()
 
 
-from crewai.agents import Agent
+from crewai import Agent
 
 from tools import search_tool, BloodTestReportTool
 
 ### Loading LLM
-llm = llm
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",
+    google_api_key=os.getenv("GOOGLE_API_KEY")
+)
 
 # Creating an Experienced Doctor agent
 doctor=Agent(
