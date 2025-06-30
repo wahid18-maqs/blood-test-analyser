@@ -4,21 +4,21 @@ import os
 import logging
 import uuid
 import asyncio
-from diskcache import Cache
+import redis.asyncio as aioredis
 import hashlib
-import re
+import json
 from crewai import Crew, Process
-from sympy import content
 from database import init_db
 from database import get_session
 from models import AnalysisResult
-from agents import doctor,verifier, nutritionist, exercise_specialist
-from task import help_patients,nutrition_analysis, exercise_planning, verification
+from agents import doctor, verifier, nutritionist, exercise_specialist
+from task import help_patients, nutrition_analysis, exercise_planning, verification
+import re
 
 init_db()
 
-# Initialize cache
-cache = Cache(directory="cache")
+# Redis Async Client
+cache = aioredis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,43 +26,25 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Blood Test Report Analyser")
 
 # Directory to store uploaded files
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = "data"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 ALLOWED_EXTENSIONS = ['.pdf']
-UPLOAD_DIR = "data"
 
 def generate_cache_key(query: str, file_bytes: bytes) -> str:
-    """Generates a unique cache key from file content and query"""
     hash_digest = hashlib.md5(file_bytes).hexdigest()
-    normalized_query = query.strip().lower()[:200] 
+    normalized_query = query.strip().lower()[:200]
     return f"{hash_digest}:{normalized_query}"
 
 def validate_file(file: UploadFile) -> bool:
-    """Validate uploaded file"""
-    # Check file extension
     if not any(file.filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-    
-    # Check file size (if available)
     if hasattr(file, 'size') and file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File size too large. Maximum 10MB allowed")
-    
     return True
 
-def sanitize_filename(filename: str) -> str:
-    """Sanitize filename to prevent path traversal attacks"""
-    import re
-    # Remove path components and keep only the filename
-    filename = os.path.basename(filename)
-    # Remove potentially dangerous characters
-    filename = re.sub(r'[^\w\-_\.]', '_', filename)
-    return filename
-
 def run_crew(query: str, file_path: str) -> dict:
-    """To run the whole crew"""
     try:
         medical_crew = Crew(
             agents=[doctor, verifier, nutritionist, exercise_specialist],
@@ -71,11 +53,11 @@ def run_crew(query: str, file_path: str) -> dict:
             verbose=True,
             memory=True,
         )
-        result = medical_crew.kickoff({'query': query,'file_path': file_path })
+        result = medical_crew.kickoff({'query': query, 'file_path': file_path})
         return {
-        'status': True,
-        'result': str(result),
-        'analysis_type': 'comprehensive',
+            'status': True,
+            'result': str(result),
+            'analysis_type': 'comprehensive',
         }
     except Exception as e:
         logger.error(f"Error running crew: {str(e)}")
@@ -84,17 +66,17 @@ def run_crew(query: str, file_path: str) -> dict:
             'error': str(e),
             'analysis_type': 'failed',
         }
-    
+
 @app.get("/")
 async def root():
-    """Health check endpoint"""
-    return {"message": "Blood Test Report Analyser API is running",
-            "version": "1.0.0",
-            "status": "Healthy"}
+    return {
+        "message": "Blood Test Report Analyser API is running",
+        "version": "1.0.0",
+        "status": "Healthy"
+    }
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
     return {
         "status": "healthy",
         "services": {
@@ -106,65 +88,42 @@ async def health_check():
 
 @app.post("/analyze")
 async def analyze_blood_report(
-    file: UploadFile = File(..., description="Blood test report PDF file"),
-    query: str = Form(default="Please provide a comprehensive analysis of my blood test report", description="Specific question about the blood test")
+    file: UploadFile = File(...),
+    query: str = Form(default="Please provide a comprehensive analysis of my blood test report")
 ):
-    """
-    Analyze blood test report and provide comprehensive health recommendations
-    
-    Returns:
-    - Medical analysis of blood test results
-    - Nutritional recommendations based on results
-    - Exercise recommendations considering health status
-    - Document verification status
-    """
-    
     file_path = None
-    
     try:
-        # Validate input
         validate_file(file)
-        
-        # Validate and sanitize query
+
         if not query or not query.strip():
             query = "Please provide a comprehensive analysis of my blood test report"
         query = query.strip()
-        
-        # Generate secure filename
-        file_id = str(uuid.uuid4())
-        original_filename = sanitize_filename(file.filename)
-        file_path = os.path.join(UPLOAD_DIR, f"blood_test_report_{file_id}_{original_filename}")
-        
-        # Ensure upload directory exists
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        
-        # Save uploaded file securely
-        try:
-            with open(file_path, "wb") as f:
-                content = await file.read()
-                if len(content) > MAX_FILE_SIZE:
-                    raise HTTPException(status_code=400, detail="File size too large")
-                f.write(content)
 
-                # Check cache for existing analysis
-                cache_key = generate_cache_key(query, content)
-                if cache_key in cache:
-                    logger.info(f"Cache hit for query: {query[:100]} with file: {original_filename}")
-                    return cache[cache_key]
-                
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
-        
-        # Log analysis start
-        logger.info(f"Starting analysis for file: {original_filename}, query: {query[:100]}...")
-        
-        # Process the blood report with all specialists
+        file_id = str(uuid.uuid4())
+        original_filename = os.path.basename(file.filename)
+        original_filename = re.sub(r'[^\w\-_\.]', '_', original_filename)
+        file_path = os.path.join(UPLOAD_DIR, f"blood_test_report_{file_id}_{original_filename}")
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+        content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File size too large")
+
+        cache_key = generate_cache_key(query, content)
+        cached = await cache.get(cache_key)
+        if cached:
+            logger.info(f"Cache hit for query: {query[:100]}")
+            return json.loads(cached)
+
+        with open(file_path, "wb") as f:
+            f.write(content)
+
+        logger.info(f"Starting analysis for file: {original_filename}")
         crew_result = await asyncio.to_thread(run_crew, query=query, file_path=file_path)
-        
+
         if not crew_result['status']:
             raise HTTPException(status_code=500, detail=f"Analysis failed: {crew_result['error']}")
-        
-        # Save analysis result to database
+
         with get_session() as session:
             analysis_result = AnalysisResult(
                 file_name=original_filename,
@@ -174,9 +133,7 @@ async def analyze_blood_report(
             )
             session.add(analysis_result)
             session.commit()
-            logger.info(f"Analysis result saved to database for file: {original_filename}")
-        
-        # Prepare response
+
         response = {
             "status": "success",
             "query": query,
@@ -185,66 +142,51 @@ async def analyze_blood_report(
             "analysis_type": crew_result['analysis_type'],
             "disclaimer": "This analysis is for informational purposes only and should not replace professional medical advice. Always consult with qualified healthcare providers for medical decisions."
         }
-        cache[cache_key] = response  
 
-        cache_key[cache_key] = response  # Store in cache 
-        
-        logger.info(f"Analysis completed successfully for file: {original_filename}")
+        await cache.set(cache_key, json.dumps(response), ex=3600)  # 1 hour
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in analyze_blood_report: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-    
     finally:
-        # Clean up uploaded file
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
                 logger.info(f"Cleaned up temporary file: {file_path}")
             except Exception as e:
                 logger.warning(f"Failed to clean up file {file_path}: {str(e)}")
-                
 
 @app.post("/analyze-simple")
 async def analyze_simple(
     file: UploadFile = File(...),
     query: str = Form(default="Summarize my blood test report")
 ):
-    """Simplified analysis endpoint with just medical interpretation"""
-    
     file_path = None
-    
     try:
         validate_file(file)
-        
-        # Generate secure filename
+
         file_id = str(uuid.uuid4())
-        original_filename = sanitize_filename(file.filename)
+        original_filename = os.path.basename(file.filename)
+        original_filename = re.sub(r'[^\w\-_\.]', '_', original_filename)
         file_path = os.path.join(UPLOAD_DIR, f"simple_analysis_{file_id}_{original_filename}")
-        
-        # Ensure upload directory exists
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         content = await file.read()
-
-        # File size validation
         if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=400, detail="File size too large. Maximum 10MB allowed")
-       
-        # Check cache for existing analysis
+            raise HTTPException(status_code=400, detail="File size too large")
+
         cache_key = generate_cache_key(query, content)
-        if cache_key in cache:
-            logger.info(f"Cache hit for query: {query[:100]} with file: {original_filename}")
-            return cache[cache_key]
-        
-        # Save uploaded file
+        cached = await cache.get(cache_key)
+        if cached:
+            logger.info(f"Cache hit for simple analysis: {query[:100]}")
+            return json.loads(cached)
+
         with open(file_path, "wb") as f:
             f.write(content)
-        
-        # Simple crew with just doctor and verifier
+
         simple_crew = Crew(
             agents=[doctor, verifier],
             tasks=[verification, help_patients],
@@ -266,10 +208,8 @@ async def analyze_simple(
             )
             session.add(analysis_result)
             session.commit()
-            logger.info(f"Analysis result saved to database for file: {original_filename}")
-        
-        
-        return {
+
+        response = {
             "status": "success",
             "query": query,
             "file_processed": original_filename,
@@ -277,26 +217,25 @@ async def analyze_simple(
             "analysis_type": "simple",
             "disclaimer": "This analysis is for informational purposes only. Consult healthcare providers for medical advice."
         }
-        
+
+        await cache.set(cache_key, json.dumps(response), ex=3600)
+        return response
+
     except Exception as e:
         logger.error(f"Error in simple analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-    
     finally:
-        # Clean up
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception as e:
                 logger.warning(f"Cleanup failed: {str(e)}")
-                
 
 @app.get("/history", response_model=list[AnalysisResult])
 def get_analysis_history():
     with get_session() as session:
         results = session.query(AnalysisResult).order_by(AnalysisResult.timestamp.desc()).all()
         return results
-
 
 if __name__ == "__main__":
     import uvicorn
