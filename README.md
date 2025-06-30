@@ -1,18 +1,58 @@
-# Project Setup and Execution Guide
+# Blood Test Report Analyser
+
+A FastAPI-based application that analyzes blood test reports (PDF) using **Google Gemini** AI agents for medical, nutrition, and exercise recommendations. Results are cached and stored in a local SQLite database.
+
+---
+
+## Features
+
+- **Upload PDF blood test reports** for AI-powered analysis.
+- **Google Gemini AI agents**: Doctor, Verifier, Nutritionist, and Exercise Specialist.
+- **Comprehensive and simple analysis** endpoints.
+- **Nutrition and exercise recommendations** based on report content.
+- **Caching** with Redis for faster repeated queries.
+- **Analysis history** stored in SQLite and viewable via API.
+
+---
 
 ## Getting Started
 
-### Install Required Libraries
+### 1. Install Required Libraries
+
 ```sh
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
-# You're All Not Set!
-🐛 **Debug Mode Activated!** The project has bugs waiting to be squashed - your mission is to fix them and bring it to life.
+### 2. Configure Environment Variables
 
-## Debugging Instructions
+Edit the `.env` file with your Google Gemini API key and Redis configuration.
 
-1. **Identify the Bug**: Carefully read the code and understand the expected behavior.
-2. **Fix the Bug**: Implement the necessary changes to fix the bug.
-3. **Test the Fix**: Run the project and verify that the bug is resolved.
-4. **Repeat**: Continue this process until all bugs are fixed.
+### 3. Start Redis Server
+
+Make sure Redis is running locally on the default port (6379).
+
+### 4. Run the Application
+
+```sh
+uvicorn main:app --reload
+```
+
+The API will be available at [http://localhost:8000](http://localhost:8000).
+
+---
+
+## API Endpoints
+
+- `POST /analyze`: Upload a PDF and get a comprehensive analysis.
+- `POST /analyze-simple`: Upload a PDF and get a simple summary.
+- `GET /history`: Retrieve analysis history from the database.
+- `GET /health`: Health check endpoint.
+
+---
+
+## Notes
+
+- **PDFs only:** Only PDF files are accepted for analysis.
+- **Disclaimer:** All analyses are for informational purposes only and do not replace professional medical advice.
+- **API Keys:** You need a valid Google Gemini API key and Serper API Key for full functionality.
+
