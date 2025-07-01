@@ -8,5 +8,5 @@ class AnalysisResult(SQLModel, table=True):
     query: str
     analysis: str
     analysis_type: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime)
     

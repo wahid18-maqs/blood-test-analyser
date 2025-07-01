@@ -1,4 +1,12 @@
 .env
 _.venv/
 __pycache__/
+*.py[cod]                   
 *.pyc
+*.pyo
+*.pyd   
+
+__pycache__/agents.cpython-311.pyc
+__pycache__/agents.cpython-311.pyc
+__pycache__/main.cpython-311.pyc
+__pycache__/tools.cpython-311.pyc
