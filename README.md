@@ -45,15 +45,6 @@ The API will be available at [http://localhost:8000](http://localhost:8000).
 
 ---
 
-## API Endpoints
-
-- `POST /analyze`: Upload a PDF and get a comprehensive analysis.
-- `POST /analyze-simple`: Upload a PDF and get a simple summary.
-- `GET /history`: Retrieve analysis history from the database.
-- `GET /health`: Health check endpoint.
-
----
-
 ## Notes
 
 - **PDFs only:** Only PDF files are accepted for analysis.
