@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 from crewai import Agent, LLM
-from tools import search_tool, blood_test_tool, nutrition_tool, exercise_tool
+from tools import blood_test_tool, nutrition_tool, exercise_tool, search_tool
 
 # Alternative LLM configuration using CrewAI's LLM class
 llm = LLM(

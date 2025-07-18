@@ -1,169 +1,117 @@
-## Importing libraries and files
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
-from crewai_tools import tools
-from crewai_tools import SerperDevTool
-from langchain.document_loaders import PyPDFLoader
-from typing import Type
-from pydantic import BaseModel, Field
 import re
+from typing import Type
+from dotenv import load_dotenv
+from crewai_tools import SerperDevTool
+from pydantic import BaseModel, Field
+from langchain_community.document_loaders import PyPDFLoader
 from crewai.tools import BaseTool
 
-## Creating search tool
+load_dotenv()
+
 search_tool = SerperDevTool()
 
+# 1. Blood Test Report Reading Tool
 class BloodTestReportInput(BaseModel):
-    """Input schema for BloodTestReportTool."""
-    path: str = Field(default='data/sample.pdf', description="Path of the PDF file to read")
+    path: str = Field(default='data/sample.pdf', description="Path to the PDF blood test report")
 
-## Creating custom pdf reader tool
 class BloodTestReportTool(BaseTool):
     name: str = "read_blood_test_report"
-    description: str = "Tool to read and extract data from a blood test report PDF file"
+    description: str = "Reads and extracts data from a blood test report PDF file"
     args_schema: Type[BaseModel] = BloodTestReportInput
 
     def _run(self, path: str = 'data/sample.pdf') -> str:
-        """Tool to read data from a pdf file from a path
-
-        Args:
-            path (str, optional): Path of the pdf file. Defaults to 'data/sample.pdf'.
-
-        Returns:
-            str: Full Blood Test report file content or instruction to upload PDF
-        """
         try:
-            # Check if file exists
             if not os.path.exists(path):
-                # Instead of showing error, return instruction to upload PDF
-                return "Please upload a blood test report PDF file to get a detailed analysis of your results."
-            
-            if not path.lower().endswith('.pdf'):
-                return "Please upload a valid PDF file containing your blood test report."
+                return "Please upload a blood test report PDF file."
 
-            # Load PDF using PyPDFLoader
+            if not path.lower().endswith('.pdf'):
+                return "Invalid file type. Please upload a PDF."
+
             loader = PyPDFLoader(file_path=path)
             docs = loader.load()
 
             full_report = ""
             for doc in docs:
-                # Clean and format the report data
                 content = doc.page_content
-                
-                # More efficient whitespace cleaning using regex
-                content = re.sub(r'\n{2,}', '\n', content)  # Replace multiple newlines with single
-                content = re.sub(r' {2,}', ' ', content)    # Replace multiple spaces with single
-                content = content.strip()
-                
-                full_report += content + "\n"
-            
-            if not full_report.strip():
-                return "The uploaded PDF appears to be empty or unreadable. Please ensure you've uploaded a valid blood test report."
-                
-            return full_report.strip()
-            
-        except Exception as e:
-            return f"Unable to read the PDF file. Please ensure you've uploaded a valid blood test report in PDF format."
-        
-class NutritionAnalysisInput(BaseModel):
-    """Input schema for NutritionTool."""
-    blood_report_data: str = Field(description="Blood report data to analyze for nutrition recommendations")
+                content = re.sub(r'\n{2,}', '\n', content)
+                content = re.sub(r' {2,}', ' ', content)
+                full_report += content.strip() + "\n"
 
-## Creating Nutrition Analysis Tool
+            if not full_report.strip():
+                return "The uploaded PDF appears empty or unreadable."
+
+            return full_report.strip()
+
+        except Exception:
+            return "Failed to read the blood test report. Make sure it is a valid PDF file."
+
+
+#  2. Nutrition Recommendation Tool
+class NutritionAnalysisInput(BaseModel):
+    blood_report_data: str = Field(description="Blood report data to analyze")
+
 class NutritionTool(BaseTool):
     name: str = "analyze_nutrition"
-    description: str = "Analyze blood test results and provide evidence-based nutrition recommendations"
+    description: str = "Analyzes blood test data and recommends nutrition"
     args_schema: Type[BaseModel] = NutritionAnalysisInput
 
     def _run(self, blood_report_data: str) -> str:
-        """Analyze blood report data and provide nutrition recommendations"""
-        try:
-            if not blood_report_data or not blood_report_data.strip():
-                return "Please upload a blood test report to receive personalized nutrition recommendations."
+        if not blood_report_data or "please upload" in blood_report_data.lower():
+            return "Upload your blood test report to get personalized nutrition advice."
 
-            # Check if this is just an instruction message (no actual report data)
-            if "please upload" in blood_report_data.lower():
-                return "Upload your blood test report to get personalized nutrition advice based on your specific lab values and health markers."
+        suggestions = []
+        text = blood_report_data.lower()
 
-            # Basic analysis logic (this would be expanded with real medical knowledge)
-            analysis_results = []
-            data_lower = blood_report_data.lower()
-            
-            # Example analysis patterns (simplified)
-            if 'hemoglobin' in data_lower or 'hb' in data_lower:
-                analysis_results.append("• Monitor iron levels - consider iron-rich foods like spinach, lean meats, and legumes")
-            
-            if 'cholesterol' in data_lower:
-                analysis_results.append("• Consider heart-healthy diet with omega-3 fatty acids, fiber-rich foods, and reduced saturated fats")
-            
-            if 'glucose' in data_lower or 'sugar' in data_lower:
-                analysis_results.append("• Monitor carbohydrate intake and consider complex carbohydrates over simple sugars")
-            
-            if 'vitamin' in data_lower:
-                analysis_results.append("• Ensure adequate vitamin intake through balanced diet and consider consulting with healthcare provider about supplementation")
+        if 'hemoglobin' in text or 'hb' in text:
+            suggestions.append("• Monitor iron intake with foods like spinach, meats, and lentils.")
+        if 'cholesterol' in text:
+            suggestions.append("• Choose heart-healthy fats like olive oil, and reduce saturated fats.")
+        if 'glucose' in text or 'sugar' in text:
+            suggestions.append("• Control sugar intake. Prefer complex carbs over simple sugars.")
+        if 'vitamin' in text:
+            suggestions.append("• Consider multivitamins or food-based vitamin sources.")
 
-            if not analysis_results:
-                analysis_results.append("• Maintain a balanced diet with variety of fruits, vegetables, whole grains, and lean proteins")
-            
-            # Add disclaimer
-            disclaimer = "\n\nDISCLAIMER: This is for informational purposes only. Always consult with a qualified healthcare provider or registered dietitian for personalized medical and nutritional advice."
-            
-            return "NUTRITION RECOMMENDATIONS:\n" + "\n".join(analysis_results) + disclaimer
-            
-        except Exception as e:
-            return "Unable to analyze nutrition data. Please ensure you've uploaded a valid blood test report."
+        if not suggestions:
+            suggestions.append("• Maintain a balanced diet with fruits, vegetables, and whole grains.")
 
+        disclaimer = "\n\nDISCLAIMER: This is educational content. Consult a registered dietitian for personalized advice."
+        return "NUTRITION RECOMMENDATIONS:\n" + "\n".join(suggestions) + disclaimer
+
+
+#  3. Exercise Plan Tool
 class ExercisePlanInput(BaseModel):
-    """Input schema for ExerciseTool."""
-    blood_report_data: str = Field(description="Blood report data to analyze for exercise recommendations")
+    blood_report_data: str = Field(description="Blood report data to analyze")
 
-## Creating Exercise Planning Tool
 class ExerciseTool(BaseTool):
     name: str = "create_exercise_plan"
-    description: str = "Create safe, evidence-based exercise recommendations based on blood test results"
+    description: str = "Creates exercise recommendations based on blood report"
     args_schema: Type[BaseModel] = ExercisePlanInput
 
     def _run(self, blood_report_data: str) -> str:
-        """Create exercise plan based on blood report data"""
-        try:
-            if not blood_report_data or not blood_report_data.strip():
-                return "Please upload a blood test report to receive personalized exercise recommendations."
+        if not blood_report_data or "please upload" in blood_report_data.lower():
+            return "Upload your blood test report to get exercise recommendations."
 
-            # Check if this is just an instruction message (no actual report data)
-            if "please upload" in blood_report_data.lower():
-                return "Upload your blood test report to get personalized exercise recommendations based on your health markers and lab values."
+        plan = []
+        text = blood_report_data.lower()
 
-            exercise_recommendations = []
-            data_lower = blood_report_data.lower()
-            
-            # Basic exercise recommendations (simplified)
-            if 'cholesterol' in data_lower or 'lipid' in data_lower:
-                exercise_recommendations.append("• Cardiovascular exercise: 150 minutes moderate-intensity or 75 minutes vigorous-intensity per week")
-            
-            if 'glucose' in data_lower or 'diabetes' in data_lower:
-                exercise_recommendations.append("• Regular aerobic exercise and resistance training to improve insulin sensitivity")
-            
-            if 'blood pressure' in data_lower or 'hypertension' in data_lower:
-                exercise_recommendations.append("• Low to moderate intensity aerobic activities like walking, swimming, or cycling")
-            
-            # General recommendations
-            exercise_recommendations.extend([
-                "• Start slowly and gradually increase intensity",
-                "• Include both aerobic and strength training exercises",
-                "• Ensure adequate warm-up and cool-down periods",
-                "• Stay hydrated and listen to your body"
-            ])
+        if 'cholesterol' in text or 'lipid' in text:
+            plan.append("• Do 150 mins/week of moderate cardio (e.g., brisk walking, cycling).")
+        if 'glucose' in text or 'diabetes' in text:
+            plan.append("• Add strength training twice a week to improve insulin response.")
+        if 'blood pressure' in text or 'hypertension' in text:
+            plan.append("• Engage in low-impact activities like swimming or walking.")
 
-            # Add important disclaimers
-            disclaimer = "\n\nIMPORTANT DISCLAIMERS:\n• Always consult with your healthcare provider before starting any new exercise program\n• Stop exercising and seek medical attention if you experience chest pain, shortness of breath, or dizziness\n• These are general recommendations and may not be suitable for all individuals"
-            
-            return "EXERCISE RECOMMENDATIONS:\n" + "\n".join(exercise_recommendations) + disclaimer
-            
-        except Exception as e:
-            return "Unable to create exercise plan. Please ensure you've uploaded a valid blood test report."
+        plan.extend([
+            "• Start slow and gradually increase intensity.",
+            "• Alternate cardio and strength days.",
+            "• Stay hydrated and listen to your body."
+        ])
 
-# Create tool instances for use in agents
+        disclaimer = "\n\nDISCLAIMER: Consult a healthcare provider before starting new exercises."
+        return "EXERCISE PLAN:\n" + "\n".join(plan) + disclaimer
+
+
 blood_test_tool = BloodTestReportTool()
 nutrition_tool = NutritionTool()
 exercise_tool = ExerciseTool()

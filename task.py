@@ -1,7 +1,7 @@
 ## Importing libraries and files
 from crewai import Task
 from agents import doctor, verifier
-from tools import search_tool, blood_test_tool
+from tools import search_tool, blood_test_tool,nutrition_tool, exercise_tool
 
 ## Creating a task to help solve user's query
 help_patients = Task(
@@ -16,8 +16,10 @@ If the report lacks sufficient data, offer general guidance based on best practi
 - Additional resources or references (real or sample links for demo)""",
 
     agent=doctor,
-    tools=[blood_test_tool, search_tool],
+    tools=[blood_test_tool, nutrition_tool, exercise_tool],
+    input_variables=["query", "report"],
     async_execution=False,
+    
 )
 
 ## Creating a nutrition analysis task
