@@ -15,6 +15,10 @@ A FastAPI-based application that analyzes blood test reports (PDF) using **Googl
 
 ---
 
+## Screenshot
+<img width="1864" height="895" alt="blood-test-analyse-result" src="https://github.com/user-attachments/assets/213602b6-4f4c-407d-83cd-f69f5425c081" />
+
+
 ## Getting Started
 
 ### 1. Install Required Libraries
