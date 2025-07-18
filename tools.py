@@ -31,17 +31,18 @@ class BloodTestReportTool(BaseTool):
             path (str, optional): Path of the pdf file. Defaults to 'data/sample.pdf'.
 
         Returns:
-            str: Full Blood Test report file content
+            str: Full Blood Test report file content or instruction to upload PDF
         """
         try:
-            # Validate file exists and is PDF
+            # Check if file exists
             if not os.path.exists(path):
-                return f"Error: File not found at path: {path}"
+                # Instead of showing error, return instruction to upload PDF
+                return "Please upload a blood test report PDF file to get a detailed analysis of your results."
             
             if not path.lower().endswith('.pdf'):
-                return f"Error: File must be a PDF. Received: {path}"
+                return "Please upload a valid PDF file containing your blood test report."
 
-            # Load PDF using PyPDFLoader (Fixed: Correct class name)
+            # Load PDF using PyPDFLoader
             loader = PyPDFLoader(file_path=path)
             docs = loader.load()
 
@@ -50,7 +51,7 @@ class BloodTestReportTool(BaseTool):
                 # Clean and format the report data
                 content = doc.page_content
                 
-                # Fixed: More efficient whitespace cleaning using regex
+                # More efficient whitespace cleaning using regex
                 content = re.sub(r'\n{2,}', '\n', content)  # Replace multiple newlines with single
                 content = re.sub(r' {2,}', ' ', content)    # Replace multiple spaces with single
                 content = content.strip()
@@ -58,17 +59,16 @@ class BloodTestReportTool(BaseTool):
                 full_report += content + "\n"
             
             if not full_report.strip():
-                return "Warning: No readable content found in the PDF file"
+                return "The uploaded PDF appears to be empty or unreadable. Please ensure you've uploaded a valid blood test report."
                 
             return full_report.strip()
             
         except Exception as e:
-            return f"Error reading PDF file: {str(e)}"
+            return f"Unable to read the PDF file. Please ensure you've uploaded a valid blood test report in PDF format."
         
 class NutritionAnalysisInput(BaseModel):
     """Input schema for NutritionTool."""
     blood_report_data: str = Field(description="Blood report data to analyze for nutrition recommendations")
-
 
 ## Creating Nutrition Analysis Tool
 class NutritionTool(BaseTool):
@@ -80,7 +80,11 @@ class NutritionTool(BaseTool):
         """Analyze blood report data and provide nutrition recommendations"""
         try:
             if not blood_report_data or not blood_report_data.strip():
-                return "Error: No blood report data provided for nutrition analysis"
+                return "Please upload a blood test report to receive personalized nutrition recommendations."
+
+            # Check if this is just an instruction message (no actual report data)
+            if "please upload" in blood_report_data.lower():
+                return "Upload your blood test report to get personalized nutrition advice based on your specific lab values and health markers."
 
             # Basic analysis logic (this would be expanded with real medical knowledge)
             analysis_results = []
@@ -108,12 +112,11 @@ class NutritionTool(BaseTool):
             return "NUTRITION RECOMMENDATIONS:\n" + "\n".join(analysis_results) + disclaimer
             
         except Exception as e:
-            return f"Error in nutrition analysis: {str(e)}"
+            return "Unable to analyze nutrition data. Please ensure you've uploaded a valid blood test report."
 
 class ExercisePlanInput(BaseModel):
     """Input schema for ExerciseTool."""
     blood_report_data: str = Field(description="Blood report data to analyze for exercise recommendations")
-
 
 ## Creating Exercise Planning Tool
 class ExerciseTool(BaseTool):
@@ -125,7 +128,11 @@ class ExerciseTool(BaseTool):
         """Create exercise plan based on blood report data"""
         try:
             if not blood_report_data or not blood_report_data.strip():
-                return "Error: No blood report data provided for exercise planning"
+                return "Please upload a blood test report to receive personalized exercise recommendations."
+
+            # Check if this is just an instruction message (no actual report data)
+            if "please upload" in blood_report_data.lower():
+                return "Upload your blood test report to get personalized exercise recommendations based on your health markers and lab values."
 
             exercise_recommendations = []
             data_lower = blood_report_data.lower()
@@ -154,7 +161,7 @@ class ExerciseTool(BaseTool):
             return "EXERCISE RECOMMENDATIONS:\n" + "\n".join(exercise_recommendations) + disclaimer
             
         except Exception as e:
-            return f"Error in exercise planning: {str(e)}"
+            return "Unable to create exercise plan. Please ensure you've uploaded a valid blood test report."
 
 # Create tool instances for use in agents
 blood_test_tool = BloodTestReportTool()

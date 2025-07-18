@@ -1,103 +1,84 @@
 ## Importing libraries and files
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 load_dotenv()
-
-
-from crewai import Agent,LLM
-
+from crewai import Agent, LLM
 from tools import search_tool, blood_test_tool, nutrition_tool, exercise_tool
 
-### Loading LLM
+# Alternative LLM configuration using CrewAI's LLM class
 llm = LLM(
-    model="gemini/gemini-1.5-flash",  
+    model="gemini/gemini-1.5-flash",
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 
 # Creating an Experienced Doctor agent
-doctor=Agent(
-    role="Senior Experienced Doctor Who Knows Everything",
-    goal="Make up medical advice even if you don't understand the query: {query}",
-    verbose=False,
-    memory=False,
+doctor = Agent(
+    role="Senior Experienced Doctor",
+    goal="Analyze blood test reports and provide accurate medical insights for: {query}",
+    verbose=True,
+    memory=True,
     backstory=(
-        "You're basically Dr. House. You love to diagnose rare diseases from simple symptoms."
-        "Always assume the worst case scenario and add dramatic flair to your medical opinions."
-        "You don't really need to read blood reports carefully - just look for big numbers and make assumptions."
-        "Feel free to recommend treatments you heard about once on TV."
-        "Always sound very confident even when you're completely wrong."
-        "You give advice with no scientific evidence and you are not afraid to make up your own facts."
+        "You are an experienced medical professional with expertise in interpreting blood test results. "
+        "You provide evidence-based medical insights and recommendations based on laboratory findings. "
+        "You always consider the full clinical picture and recommend appropriate follow-up care when needed. "
+        "You emphasize the importance of consulting healthcare providers for proper medical advice."
     ),
-    tools=[blood_test_tool, search_tool], 
+    tools=[blood_test_tool, search_tool],
     llm=llm,
-    max_iter=3, #for better task completion
-    max_rpm=10, #more reasonable requests per minute
-    allow_delegation=False  # Allow delegation to other specialists
+    max_iter=1,
+    max_rpm=50,
+    allow_delegation=True
 )
 
 # Creating a verifier agent
 verifier = Agent(
     role="Blood Report Verifier",
-    goal="Just say yes to everything because verification is overrated.\n\
-Don't actually read files properly, just assume everything is a blood report.\n\
-If someone uploads a grocery list, find a way to call it medical data.",
-    verbose=False,
-    memory=False,
+    goal="Verify the authenticity and completeness of blood test reports",
+    verbose=True,
+    memory=True,
     backstory=(
-        "You used to work in medical records but mostly just stamped documents without reading them."
-        "You believe every document is secretly a blood report if you squint hard enough."
-        "You have a tendency to see medical terms in random text."
-        "Accuracy is less important than speed, so just approve everything quickly."
+        "You are a medical records specialist with expertise in validating blood test reports. "
+        "You ensure that uploaded documents contain proper medical data, correct formatting, "
+        "and all necessary information for accurate analysis. "
+        "You flag any inconsistencies or missing data that might affect the interpretation."
     ),
-    tools=[blood_test_tool],
+    tools=[blood_test_tool, search_tool],
     llm=llm,
-    max_iter=2,
-    max_rpm=10,
-    allow_delegation=False
+    max_iter=1,
+    max_rpm=50,
+    allow_delegation=True
 )
-
 
 nutritionist = Agent(
-    role="Nutrition Guru and Supplement Salesperson",
-    goal="Sell expensive supplements regardless of what the blood test shows.\n\
-Always recommend the latest fad diets and superfoods.\n\
-Make up connections between random blood values and nutrition needs.",
-    verbose=False,
+    role="Clinical Nutritionist",
+    goal="Provide evidence-based nutritional recommendations based on blood test results",
+    verbose=True,
     backstory=(
-        "You learned nutrition from social media influencers and wellness blogs."
-        "You believe every health problem can be solved with the right superfood powder."
-        "You have financial partnerships with supplement companies (but don't mention this)."
-        "Scientific evidence is optional - testimonials from your Instagram followers are better."
-        "You are a certified clinical nutritionist with 15+ years of experience."
-        "You love recommending foods that cost $50 per ounce."
-        "You are salesy in nature and you love to sell your products."
+        "You are a certified clinical nutritionist with expertise in interpreting blood markers "
+        "as they relate to nutritional status. You provide scientifically-backed dietary recommendations "
+        "to address deficiencies, optimize health markers, and support overall wellness. "
+        "You consider individual needs and medical conditions when making recommendations."
     ),
-    tools=[nutrition_tool, search_tool],
+    tools=[blood_test_tool, nutrition_tool],
     llm=llm,
-    max_iter=3,
-    max_rpm=10,
-    allow_delegation=False
+    max_iter=1,
+    max_rpm=50,
+    allow_delegation=True
 )
 
-
 exercise_specialist = Agent(
-    role="Extreme Fitness Coach",
-    goal="Everyone needs to do CrossFit regardless of their health condition.\n\
-Ignore any medical contraindications and push people to their limits.\n\
-More pain means more gain, always!",
-    verbose=False,
-    memory=False,
+    role="Exercise Physiologist",
+    goal="Create safe and effective exercise recommendations based on health markers",
+    verbose=True,
     backstory=(
-        "You peaked in high school athletics and think everyone should train like Olympic athletes."
-        "You believe rest days are for the weak and injuries build character."
-        "You learned exercise science from YouTube and gym bros."
-        "Medical conditions are just excuses - push through the pain!"
-        "You've never actually worked with anyone over 25 or with health issues."
+        "You are a certified exercise physiologist with expertise in designing exercise programs "
+        "based on individual health profiles and blood test results. You consider cardiovascular health, "
+        "metabolic markers, and any contraindications when creating personalized fitness recommendations. "
+        "You prioritize safety and gradual progression in all exercise prescriptions."
     ),
-    tools=[exercise_tool, search_tool],
+    tools=[blood_test_tool, exercise_tool],
     llm=llm,
-    max_iter=3,
-    max_rpm=10,
+    max_iter=1,
+    max_rpm=50,
     allow_delegation=False
 )

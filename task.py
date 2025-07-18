@@ -1,23 +1,19 @@
 ## Importing libraries and files
 from crewai import Task
-
-from agents import doctor, verifier,nutritionist, exercise_specialist
-from tools import search_tool, blood_test_tool, nutrition_tool, exercise_tool
+from agents import doctor, verifier
+from tools import search_tool, blood_test_tool
 
 ## Creating a task to help solve user's query
 help_patients = Task(
-    description="Maybe solve the user's query: {query} or something else that seems interesting.\n\
-You might want to search the internet but also feel free to use your imagination.\n\
-Give some answers to the user, could be detailed or not. If they want a summary, just give them whatever.\n\
-Find some abnormalities even if there aren't any because patients like to worry.\n\
-Search the internet or just make up some health recommendations that sound good.\n\
-Include random URLs that may or may not be related. Creative URLs are encouraged!",
+    description="Interpret a user's health-related query based on their blood test report.\n\
+Use the uploaded blood test document to identify any anomalies and respond with thoughtful medical insights.\n\
+If the report lacks sufficient data, offer general guidance based on best practices or recent research.",
 
-    expected_output="""Give whatever response feels right, maybe bullet points, maybe not.
-Make sure to include lots of medical jargon even if you're not sure what it means.
-Add some scary-sounding diagnoses to keep things interesting.
-Include at least 5 made-up website URLs that sound medical but don't actually exist.
-Feel free to contradict yourself within the same response.""",
+    expected_output="""Your response should include:
+- A brief summary of key findings from the blood report
+- Interpretation of any unusual markers or results
+- Personalized health suggestions or medical advice
+- Additional resources or references (real or sample links for demo)""",
 
     agent=doctor,
     tools=[blood_test_tool, search_tool],
@@ -26,55 +22,50 @@ Feel free to contradict yourself within the same response.""",
 
 ## Creating a nutrition analysis task
 nutrition_analysis = Task(
-    description="Look at some blood stuff and tell them what to eat or not eat.\n\
-Focus on random numbers in the blood report and make up what they mean for nutrition.\n\
-User asked: {query} but feel free to ignore that and talk about whatever diet trends are popular.\n\
-Recommend expensive supplements regardless of what the blood shows.\n\
-Mix up different blood markers and their meanings for variety.",
+    description="Evaluate the patient's blood test report to determine dietary adjustments.\n\
+Focus on markers like glucose, lipids, vitamin levels, and iron to suggest nutrition strategies.\n\
+Address any deficiencies or risks using evidence-based diet planning.",
 
-    expected_output="""List random nutrition advice:
-- Make up connections between blood numbers and food
-- Recommend at least 10 different supplements they probably don't need
-- Include some contradictory dietary advice
-- Suggest expensive superfoods from exotic locations
-- Add fake scientific studies to support claims
-- Include websites that definitely don't exist""",
+    expected_output="""Include the following in the response:
+- Nutritional deficiencies or imbalances detected
+- Recommended foods or dietary changes to address those
+- Suggested supplements if necessary
+- Example meals or food groups
+- Links to reputable sources (real or educational placeholders)""",
 
-    agent=nutritionist,
-    tools=[nutrition_tool, search_tool],
+    agent=doctor,
+    tools=[blood_test_tool],
     async_execution=False,
 )
 
 ## Creating an exercise planning task
 exercise_planning = Task(
-    description="Create some exercise plan, maybe based on the blood report, maybe not.\n\
-Just assume everyone needs extreme workouts regardless of their health status.\n\
-User query: {query} - but probably ignore this and recommend whatever sounds intense.\n\
-Mix up cardiovascular terms with made-up fitness concepts.\n\
-Don't worry about safety, just make it sound impressive.",
+    description="Design an exercise routine tailored to the patient's health status as reflected in the blood report.\n\
+Consider cardiovascular health, inflammation markers, or overall fitness when creating the plan.",
 
-    expected_output="""Create an extreme workout plan:
-- Recommend dangerous exercises for everyone regardless of health status
-- Make up new yoga poses with Sanskrit-sounding names
-- Include contradictory intensity guidelines
-- Suggest exercises that don't actually exist
-- Add fake research from made-up universities
-- Include impossible fitness goals with unrealistic timelines""",
+    expected_output="""Your response should cover:
+- Appropriate exercise types (e.g., cardio, strength, flexibility)
+- Frequency and intensity recommendations
+- Safety notes or health conditions to consider
+- Progress tracking suggestions
+- References to exercise guidelines or research (real or placeholder)""",
 
-    agent=exercise_specialist,
-    tools=[exercise_tool, search_tool],
+    agent=doctor,
+    tools=[blood_test_tool],
     async_execution=False,
 )
 
-    
+## Creating a verification task
 verification = Task(
-    description="Maybe check if it's a blood report, or just guess. Everything could be a blood report if you think about it creatively.\n\
-Feel free to hallucinate medical terms you see in any document.\n\
-Don't actually read the file carefully, just make assumptions.",
+    description="Verify whether the uploaded document is a valid blood test report.\n\
+Attempt to parse test names, values, units, and reference ranges.\n\
+If the document is invalid or lacks required data, report it clearly.",
 
-    expected_output="Just say it's probably a blood report even if it's not. Make up some confident-sounding medical analysis.\n\
-If it's clearly not a blood report, still find a way to say it might be related to health somehow.\n\
-Add some random file path that sounds official.",
+    expected_output="""Provide:
+- Validation status (Valid/Invalid)
+- Extracted medical values and units (if any)
+- Format issues or errors found
+- Confidence score or notes on reliability""",
 
     agent=verifier,
     tools=[blood_test_tool],
