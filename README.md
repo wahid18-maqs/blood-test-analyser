@@ -11,7 +11,7 @@ A FastAPI-based application that analyzes blood test reports (PDF) using **Googl
 - **Comprehensive and simple analysis** endpoints.
 - **Nutrition and exercise recommendations** based on report content.
 - **Caching** with Redis for faster repeated queries.
-- **Analysis history** stored in SQLite and viewable via API.
+- **Analysis history** stored in Mongodb.
 
 ---
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ### 2. Configure Environment Variables
 
-Edit the `.env` file with your Google Gemini API key and Redis configuration.
+Edit the `.env` file with your Google Gemini API key ,Serper API Key and MONGODB_URI .
 
 ### 3. Start Redis Server
 
