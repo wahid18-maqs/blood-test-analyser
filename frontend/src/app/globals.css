@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #F8FAFC;
+  --color-card: #FFFFFF;
+  --color-primary: #1E3A8A;
+  --color-primary-dark: #0F172A;
+
+  --color-medical-bg: #E6F4EA;
+  --color-medical-text: #137333;
+
+  --color-verification-bg: #FEF7E0;
+  --color-verification-text: #B06000;
+
+  --color-nutrition-bg: #E8F0FE;
+  --color-nutrition-text: #1A73E8;
+
+  --color-exercise-bg: #FCE8E6;
+  --color-exercise-text: #C5221F;
+}
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #1E293B;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}

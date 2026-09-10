@@ -7,7 +7,7 @@ from tools import blood_test_tool, nutrition_tool, exercise_tool, search_tool
 
 # Alternative LLM configuration using CrewAI's LLM class
 llm = LLM(
-    model="gemini/gemini-1.5-flash",
+    model="gemini/gemini-2.5-flash",
     api_key=os.getenv("GOOGLE_API_KEY")
 )
 

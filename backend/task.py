@@ -1,6 +1,6 @@
 ## Importing libraries and files
 from crewai import Task
-from agents import doctor, verifier
+from agents import doctor, verifier, nutritionist, exercise_specialist
 from tools import search_tool, blood_test_tool,nutrition_tool, exercise_tool
 
 ## Creating a task to help solve user's query
@@ -35,7 +35,7 @@ Address any deficiencies or risks using evidence-based diet planning.",
 - Example meals or food groups
 - Links to reputable sources (real or educational placeholders)""",
 
-    agent=doctor,
+    agent=nutritionist,
     tools=[blood_test_tool],
     async_execution=False,
 )
@@ -52,7 +52,7 @@ Consider cardiovascular health, inflammation markers, or overall fitness when cr
 - Progress tracking suggestions
 - References to exercise guidelines or research (real or placeholder)""",
 
-    agent=doctor,
+    agent=exercise_specialist,
     tools=[blood_test_tool],
     async_execution=False,
 )
