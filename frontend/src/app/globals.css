@@ -1,31 +1,157 @@
 @import "tailwindcss";
 
 @theme {
-  --color-surface: #F8FAFC;
-  --color-card: #FFFFFF;
-  --color-primary: #1E3A8A;
-  --color-primary-dark: #0F172A;
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-primary: #3B82F6;
+  --color-primary-dark: var(--primary-dark-text);
 
-  --color-medical-bg: #E6F4EA;
-  --color-medical-text: #137333;
+  --color-medical-bg: var(--medical-bg);
+  --color-medical-text: var(--medical-text);
 
-  --color-verification-bg: #FEF7E0;
-  --color-verification-text: #B06000;
+  --color-verification-bg: var(--verification-bg);
+  --color-verification-text: var(--verification-text);
 
-  --color-nutrition-bg: #E8F0FE;
-  --color-nutrition-text: #1A73E8;
+  --color-nutrition-bg: var(--nutrition-bg);
+  --color-nutrition-text: var(--nutrition-text);
 
-  --color-exercise-bg: #FCE8E6;
-  --color-exercise-text: #C5221F;
+  --color-exercise-bg: var(--exercise-bg);
+  --color-exercise-text: var(--exercise-text);
 }
 
 :root {
   --background: #F8FAFC;
   --foreground: #1E293B;
+  --surface: #F8FAFC;
+  --card: #FFFFFF;
+  --primary-dark-text: #0F172A;
+
+  --medical-bg: #E6F4EA;
+  --medical-text: #137333;
+
+  --verification-bg: #FEF7E0;
+  --verification-text: #B06000;
+
+  --nutrition-bg: #E8F0FE;
+  --nutrition-text: #1A73E8;
+
+  --exercise-bg: #FCE8E6;
+  --exercise-text: #C5221F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0B0F17;
+    --foreground: #F1F5F9;
+    --surface: #0B0F17;
+    --card: #151C2C;
+    --primary-dark-text: #F8FAFC;
+
+    --medical-bg: #064E3B;
+    --medical-text: #6EE7B7;
+
+    --verification-bg: #78350F;
+    --verification-text: #FDE68A;
+
+    --nutrition-bg: #1E3A8A;
+    --nutrition-text: #93C5FD;
+
+    --exercise-bg: #881337;
+    --exercise-text: #FCA5A5;
+  }
+
+  /* Dark theme global overrides for default borders and muted text */
+  .border-slate-100,
+  .border-slate-200 {
+    border-color: #243048 !important;
+  }
+
+  .bg-slate-50,
+  .bg-slate-50\/50,
+  .bg-slate-100 {
+    background-color: #1A2336 !important;
+  }
+
+  .text-slate-400,
+  .text-slate-500 {
+    color: #94A3B8 !important;
+  }
+
+  .text-slate-600,
+  .text-slate-700,
+  .text-slate-800 {
+    color: #E2E8F0 !important;
+  }
+
+  input, textarea, select {
+    background-color: #1A2336 !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Main Action Buttons (UPLOAD PDF, Sign in, Submit, etc.): Transparent by default, solid blue on hover */
+button.bg-primary-dark,
+a.bg-primary-dark {
+  background-color: transparent !important;
+  color: var(--primary-dark-text) !important;
+  border: 1.5px solid #2563EB !important;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+button.bg-primary-dark:hover,
+a.bg-primary-dark:hover,
+.hover\:bg-primary:hover {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Secondary/Outline Buttons styling */
+.hover\:bg-slate-50 {
+  background-color: transparent !important;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.hover\:bg-slate-50:hover {
+  background-color: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border-color: #BFDBFE !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  button.bg-primary-dark,
+  a.bg-primary-dark {
+    color: #F8FAFC !important;
+    border-color: #3B82F6 !important;
+  }
+
+  button.bg-primary-dark:hover,
+  a.bg-primary-dark:hover {
+    background-color: #3B82F6 !important;
+    color: #FFFFFF !important;
+    border-color: #3B82F6 !important;
+  }
+
+  .hover\:bg-slate-50 {
+    background-color: transparent !important;
+  }
+
+  .hover\:bg-slate-50:hover {
+    background-color: #1E293B !important;
+    color: #60A5FA !important;
+    border-color: #3B82F6 !important;
+  }
+}
+
+
+
+

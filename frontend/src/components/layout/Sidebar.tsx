@@ -1,9 +1,9 @@
 "use client";
+
 import { LayoutDashboard, History, HeartPulse, Settings, HelpCircle, Droplet, ChevronDown, LogOut } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import TechStackFooter from "./TechStackFooter";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -12,10 +12,6 @@ const NAV_ITEMS = [
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
   { label: "Support", icon: HelpCircle, href: "/dashboard/support" },
 ];
-
-
-
-
 
 export default function Sidebar({ activeHref = "/dashboard" }: { activeHref?: string }) {
   const { user, logout } = useAuth();
@@ -72,8 +68,6 @@ export default function Sidebar({ activeHref = "/dashboard" }: { activeHref?: st
           })}
         </nav>
       </div>
-
-      <TechStackFooter />
     </aside>
   );
 }

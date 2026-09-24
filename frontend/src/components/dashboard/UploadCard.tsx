@@ -73,10 +73,6 @@ export default function UploadCard({ onAnalyzed }: { onAnalyzed: (r: AnalysisRes
           }}
         />
       </div>
-
-      <button className="w-full mt-4 border border-slate-200 rounded-lg py-2.5 text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-        View Sample Analysis
-      </button>
     </section>
   );
 }
