@@ -4,6 +4,10 @@ export interface User {
 }
 
 export interface HistoryItem {
+  analysis_id?: string;
+  report_type?: string;
+  diagnostic_center?: string;
+  status?: string;
   file: string;
   query: string;
   analysis: string;
@@ -15,6 +19,14 @@ export interface HistoryItem {
   };
   markers?: Marker[];
   timestamp: string;
+}
+
+export interface PaginatedHistory {
+  items: HistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
 }
 
 export interface Marker {
@@ -38,3 +50,60 @@ export interface AnalysisResult {
   };
   markers: Marker[];
 }
+
+export interface MedicalCondition {
+  id?: string;
+  name: string;
+  notes: string;
+}
+
+export interface SurgicalHistory {
+  id?: string;
+  procedure: string;
+  date: string;
+}
+
+export interface Medication {
+  id?: string;
+  name: string;
+  dosage: string;
+  schedule: string;
+}
+
+export interface Vaccination {
+  id?: string;
+  name: string;
+  date: string;
+}
+
+export interface HealthProfile {
+  name: string;
+  age: number | string;
+  dob: string;
+  gender: string;
+  phone: string;
+  email: string;
+  emergencyContact: {
+    name: string;
+    phone: string;
+  };
+  insurance: {
+    provider: string;
+    memberId: string;
+  };
+  vitals: {
+    weight: number | string; // in kg or lbs
+    height: number | string; // in cm or inches
+    bloodType: string;
+    systolicBP: number | string;
+    diastolicBP: number | string;
+    restingHeartRate: number | string;
+  };
+  medicalConditions: MedicalCondition[];
+  surgeries: SurgicalHistory[];
+  medications: Medication[];
+  allergies: string[];
+  vaccinations: Vaccination[];
+}
+
+

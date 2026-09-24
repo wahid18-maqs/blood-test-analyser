@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export function useHistory() {
-  return useQuery({ queryKey: ["history"], queryFn: api.history });
+export function useHistory(params?: { page?: number; pageSize?: number; search?: string; reportType?: string }) {
+  return useQuery({
+    queryKey: ["history", params],
+    queryFn: () => api.history(params),
+  });
 }
+

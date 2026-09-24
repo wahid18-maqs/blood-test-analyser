@@ -7,11 +7,15 @@ import TechStackFooter from "./TechStackFooter";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Reports History", icon: History, href: "/dashboard" },
-  { label: "Health Profile", icon: HeartPulse, href: "/dashboard" },
-  { label: "Settings", icon: Settings, href: "/dashboard" },
-  { label: "Support", icon: HelpCircle, href: "/dashboard" },
+  { label: "Reports History", icon: History, href: "/dashboard/history" },
+  { label: "Health Profile", icon: HeartPulse, href: "/dashboard/profile" },
+  { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+  { label: "Support", icon: HelpCircle, href: "/dashboard/support" },
 ];
+
+
+
+
 
 export default function Sidebar({ activeHref = "/dashboard" }: { activeHref?: string }) {
   const { user, logout } = useAuth();

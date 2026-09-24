@@ -5,17 +5,19 @@ load_dotenv()
 from crewai import Agent, LLM
 from tools import blood_test_tool, nutrition_tool, exercise_tool, search_tool
 
-# Alternative LLM configuration using CrewAI's LLM class
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
+# LLM configuration using Groq LLM
 llm = LLM(
-    model="gemini/gemini-2.5-flash",
-    api_key=os.getenv("GOOGLE_API_KEY")
+    model="groq/openai/gpt-oss-120b",
+    temperature=0.7
 )
 
 # Creating an Experienced Doctor agent
 doctor = Agent(
     role="Senior Experienced Doctor",
     goal="Analyze blood test reports and provide accurate medical insights for: {query}",
-    verbose=True,
+    verbose=False,
     memory=True,
     backstory=(
         "You are an experienced medical professional with expertise in interpreting blood test results. "
@@ -34,7 +36,7 @@ doctor = Agent(
 verifier = Agent(
     role="Blood Report Verifier",
     goal="Verify the authenticity and completeness of blood test reports",
-    verbose=True,
+    verbose=False,
     memory=True,
     backstory=(
         "You are a medical records specialist with expertise in validating blood test reports. "
@@ -52,7 +54,7 @@ verifier = Agent(
 nutritionist = Agent(
     role="Clinical Nutritionist",
     goal="Provide evidence-based nutritional recommendations based on blood test results",
-    verbose=True,
+    verbose=False,
     backstory=(
         "You are a certified clinical nutritionist with expertise in interpreting blood markers "
         "as they relate to nutritional status. You provide scientifically-backed dietary recommendations "
@@ -69,7 +71,7 @@ nutritionist = Agent(
 exercise_specialist = Agent(
     role="Exercise Physiologist",
     goal="Create safe and effective exercise recommendations based on health markers",
-    verbose=True,
+    verbose=False,
     backstory=(
         "You are a certified exercise physiologist with expertise in designing exercise programs "
         "based on individual health profiles and blood test results. You consider cardiovascular health, "

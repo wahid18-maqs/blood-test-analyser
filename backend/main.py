@@ -12,6 +12,9 @@ from task import help_patients, verification, nutrition_analysis, exercise_plann
 from db import reports_collection
 from langchain_community.document_loaders import PyPDFLoader
 from auth import router as auth_router
+from profile import router as profile_router
+from settings import router as settings_router
+from support import router as support_router
 
 load_dotenv()
 
@@ -32,6 +35,12 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(profile_router)
+app.include_router(settings_router)
+app.include_router(support_router)
+
+
+
 
 def extract_text_from_pdf(file_path: str) -> str:
     try:
@@ -42,10 +51,10 @@ def extract_text_from_pdf(file_path: str) -> str:
         print("Error reading PDF:", str(e))
         return ""
 
-# In-memory store fallback when MongoDB is unconfigured or unreachable
-IN_MEMORY_REPORTS: List[Dict[str, Any]] = []
+from store import IN_MEMORY_REPORTS
 
 def parse_markers_from_text(text: str) -> List[Dict[str, Any]]:
+
     """Extract standard blood test markers using flexible regex parsing."""
     markers = []
     text_lower = text.lower()
@@ -96,6 +105,7 @@ async def run_crew_async(query: str, report: str):
             agents=[verifier, doctor, nutritionist, exercise_specialist],
             tasks=[verification, help_patients, nutrition_analysis, exercise_planning],
             process=Process.sequential,
+            verbose=False,
         )
         crew_output = await medical_crew.kickoff_async({
             "query": query,
@@ -160,7 +170,24 @@ async def analyze_blood_report(
         markers = parse_markers_from_text(report_text)
 
         now = datetime.datetime.utcnow()
+        # Generate stable Analysis ID format #BTA-YYYY-NNN at insert time
+        year = now.year
+        try:
+            db_count = reports_collection.count_documents({})
+        except Exception:
+            db_count = len(IN_MEMORY_REPORTS)
+        seq_num = (db_count + 1) % 1000
+        analysis_id = f"BTA-{year}-{seq_num:03d}"
+
+        # TODO: Classify report_type based on PDF content analysis (e.g. Routine, Comprehensive, Specialized)
+        report_type = "Routine"
+        diagnostic_center = "Unknown"  # Default unless provided or extracted
+
         doc = {
+            "analysis_id": analysis_id,
+            "report_type": report_type,
+            "diagnostic_center": diagnostic_center,
+            "status": "Completed - Reviewed",
             "query": query,
             "analysis": agent_outputs["medical"],
             "agents": agent_outputs,
@@ -178,6 +205,9 @@ async def analyze_blood_report(
 
         return {
             "status": "success",
+            "analysis_id": analysis_id,
+            "report_type": report_type,
+            "diagnostic_center": diagnostic_center,
             "query": query,
             "analysis": agent_outputs["medical"],
             "agents": agent_outputs,
@@ -196,41 +226,106 @@ async def analyze_blood_report(
                 pass
 
 @app.get("/history")
-async def get_history():
+async def get_history(
+    page: int = 1,
+    page_size: int = 10,
+    search: str = "",
+    q: str = "",
+    report_type: str = "All Reports"
+):
     history_items = []
+    total_count = 0
+
+    # Support both 'search' and 'q' query parameters
+    query_str = (q or search).strip()
+    skip = (page - 1) * page_size
+
+    # Build Mongo filter
+    mongo_filter = {}
+    if query_str:
+        mongo_filter["$or"] = [
+            {"file_name": {"$regex": query_str, "$options": "i"}},
+            {"query": {"$regex": query_str, "$options": "i"}},
+            {"analysis": {"$regex": query_str, "$options": "i"}},
+            {"analysis_id": {"$regex": query_str, "$options": "i"}},
+            {"agents.medical": {"$regex": query_str, "$options": "i"}}
+        ]
+    if report_type and report_type != "All Reports":
+        mongo_filter["report_type"] = report_type
+
     try:
-        records = list(reports_collection.find().sort("timestamp", -1).limit(10))
+        total_count = reports_collection.count_documents(mongo_filter)
+        records = list(reports_collection.find(mongo_filter).sort("timestamp", -1).skip(skip).limit(page_size))
         for r in records:
+            agents_dict = r.get("agents", {})
+            if isinstance(agents_dict, dict) and "medical" not in agents_dict:
+                agents_dict["medical"] = r.get("analysis", "")
+
             history_items.append({
+                "analysis_id": r.get("analysis_id", "BTA-2026-001"),
+                "report_type": r.get("report_type", "Routine"),
+                "diagnostic_center": r.get("diagnostic_center", "Unknown"),
+                "status": r.get("status", "Completed - Reviewed"),
                 "file": r.get("file_name"),
                 "query": r.get("query"),
                 "analysis": r.get("analysis", ""),
-                "agents": r.get("agents", {
-                    "medical": r.get("analysis", ""),
-                    "verification": "",
-                    "nutrition": "",
-                    "exercise": ""
-                }),
+                "agents": agents_dict,
                 "markers": r.get("markers", []),
                 "timestamp": r.get("timestamp").isoformat() if isinstance(r.get("timestamp"), datetime.datetime) else str(r.get("timestamp"))
             })
     except Exception as e:
         print("MongoDB history fetch skipped/error:", str(e))
 
-    # Merge in-memory fallback items if MongoDB yields no items or fails
-    if not history_items:
-        for r in IN_MEMORY_REPORTS[:10]:
+    # Fallback to IN_MEMORY_REPORTS if Mongo fetch produced nothing
+    if not history_items and not total_count:
+        filtered_mem = IN_MEMORY_REPORTS
+        if query_str:
+            s = query_str.lower()
+            filtered_mem = [
+                r for r in filtered_mem
+                if s in r.get("file_name", "").lower()
+                or s in r.get("query", "").lower()
+                or s in r.get("analysis", "").lower()
+                or s in r.get("analysis_id", "").lower()
+                or s in r.get("agents", {}).get("medical", "").lower()
+            ]
+        if report_type and report_type != "All Reports":
+            filtered_mem = [r for r in filtered_mem if r.get("report_type") == report_type]
+
+        total_count = len(filtered_mem)
+        for idx, r in enumerate(filtered_mem[skip:skip + page_size]):
+            seq = total_count - (skip + idx)
+            agents_dict = r.get("agents", {})
+            if isinstance(agents_dict, dict) and "medical" not in agents_dict:
+                agents_dict["medical"] = r.get("analysis", "")
+
             history_items.append({
+                "analysis_id": r.get("analysis_id", f"BTA-2026-{seq:03d}"),
+                "report_type": r.get("report_type", "Routine"),
+                "diagnostic_center": r.get("diagnostic_center", "Unknown"),
+                "status": r.get("status", "Completed - Reviewed"),
                 "file": r.get("file_name"),
                 "query": r.get("query"),
                 "analysis": r.get("analysis", ""),
-                "agents": r.get("agents", {}),
+                "agents": agents_dict,
                 "markers": r.get("markers", []),
                 "timestamp": str(r.get("timestamp"))
             })
 
-    return history_items
+    import math
+    total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
+
+    return {
+        "items": history_items,
+        "results": history_items,
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "pages": total_pages
+    }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
